@@ -1,0 +1,127 @@
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      workload: management
+    tolerations:
+    - key: workload
+      operator: Equal
+      value: management
+      effect: NoSchedule
+    replicas: 1
+    retention: 7d
+    retentionSize: 24GB
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3-retain
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 30Gi
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+grafana:
+  nodeSelector:
+    workload: management
+  tolerations:
+  - key: workload
+    operator: Equal
+    value: management
+    effect: NoSchedule
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    storageClassName: gp3-retain
+    size: 5Gi
+  admin:
+    existingSecret: grafana-admin
+    userKey: username
+    passwordKey: password
+  additionalDataSources:
+  - name: Loki
+    type: loki
+    url: http://loki:3100
+    access: proxy
+    uid: loki
+  - name: CloudWatch
+    type: cloudwatch
+    jsonData:
+      authType: default
+      defaultRegion: ap-southeast-1
+    uid: cloudwatch
+  serviceAccount:
+    create: true
+    name: grafana
+    annotations: {}
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: monitoring
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: management
+    tolerations:
+    - key: workload
+      operator: Equal
+      value: management
+      effect: NoSchedule
+    replicas: 1
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3-retain
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+prometheusOperator:
+  nodeSelector:
+    workload: management
+  tolerations:
+  - key: workload
+    operator: Equal
+    value: management
+    effect: NoSchedule
+  admissionWebhooks:
+    patch:
+      nodeSelector:
+        workload: management
+      tolerations:
+      - key: workload
+        operator: Equal
+        value: management
+        effect: NoSchedule
+kube-state-metrics:
+  nodeSelector:
+    workload: management
+  tolerations:
+  - key: workload
+    operator: Equal
+    value: management
+    effect: NoSchedule
+prometheus-node-exporter:
+  tolerations:
+  - operator: Exists
+crds:
+  upgradeJob:
+    nodeSelector:
+      workload: management
+    tolerations:
+    - key: workload
+      operator: Equal
+      value: management
+      effect: NoSchedule

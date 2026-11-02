@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "source_repository": "hoi3dkhoiche-byte/DevOps-retails-shop",
+  "source_commit": "d0e13455270aed05c1029422366de96873524edf",
+  "run": {
+    "attempt": "1",
+    "id": "41033493219",
+    "url": "https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop/actions/runs/41033493219/attempts/1"
+  },
+  "artifact_id": 12967148653,
+  "artifact_name": "gitops-images-41033493219-1",
+  "artifact_sha256": "sha256:bd3b24478f084f21411d68fc9db9c5a03bdab12a0884b66ce61b3f7748161cf0",
+  "verified_on": "2026-11-01",
+  "verification_timezone": "Asia/Saigon",
+  "checks": {
+    "complete_ci_attempt": true,
+    "artifact_checksum": true,
+    "source_schema": true
+  },
+  "jobs": [
+    {
+      "id": 123988589314,
+      "name": "plan",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743008,
+      "name": "style",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743036,
+      "name": "source-cart",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743042,
+      "name": "source-checkout",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743076,
+      "name": "source-catalog",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743083,
+      "name": "source-ui",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123988743176,
+      "name": "source-orders",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123989719325,
+      "name": "images",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123992799137,
+      "name": "e2e-compose",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123992799175,
+      "name": "e2e-search",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123992799177,
+      "name": "e2e-kind",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123992799204,
+      "name": "scan",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123995130755,
+      "name": "ci-required",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    },
+    {
+      "id": 123995221305,
+      "name": "publish",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 41033493219,
+      "run_attempt": 1
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.local/
+.venv/
+__pycache__/
+*.pyc
+*.tmp-*
+terraform-outputs*.json
+*.tfstate*
+.env
+.env.*

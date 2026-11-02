@@ -1,0 +1,23 @@
+controller:
+  nodeSelector:
+    workload: management
+  tolerations:
+  - key: workload
+    operator: Equal
+    value: management
+    effect: NoSchedule
+  replicas: 1
+  extraArgs:
+  - --aws-verify-target-group
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+      additionalLabels:
+        release: kube-prometheus-stack
+dashboard:
+  enabled: false
+serviceAccount:
+  create: true
+  name: argo-rollouts
+  annotations: {}

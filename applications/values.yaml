@@ -1,0 +1,9 @@
+environment: dev
+deployment:
+  enabled: false
+release:
+  enabled: false
+images: {}
+roles: {}
+dataCidrs: []
+publicCidrs: []

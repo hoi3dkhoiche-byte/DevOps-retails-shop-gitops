@@ -1,0 +1,6 @@
+platform: true
+deployment:
+  enabled: false
+roles: {}
+alerting:
+  enabled: false

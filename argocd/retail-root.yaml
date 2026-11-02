@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: retail-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop-gitops.git
+    targetRevision: main
+    path: bootstrap
+    helm:
+      valueFiles:
+        - ../config.yaml
+        - ../versions.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    syncOptions:
+      - ServerSideApply=true
