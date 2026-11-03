@@ -68,6 +68,16 @@ Repo này lưu trạng thái triển khai cho EKS `retail-lab-eks` tại Singapo
 
 Namespace/AppProject và storage được tạo trước các Application phụ thuộc. ESO, Rollouts, credential monitoring và Prometheus CRD có thứ tự đồng bộ riêng. Root/platform không tự prune. Dev tự sync; production workload phải sync thủ công.
 
+## Quyền đọc cả hai repo khi chuyển sang private
+
+Argo CD cần đọc **repo source để lấy chart** và **repo GitOps để lấy values**. Hai repo hiện public nên `repositoryCredentials.enabled` mặc định `false`. Nếu một hoặc cả hai repo chuyển private, tạo một credential chỉ có quyền Contents: read trên cả hai repository và lưu trực tiếp trong Secrets Manager tại `/retail/platform/argocd/repositories`, dưới dạng JSON có hai thuộc tính `username` và `password` (password là GitHub token). Không ghi giá trị credential vào Git, tfvars, CLI argument hoặc artifact. Secret container và quyền ESO reader thuộc Terraform source; backend bootstrap không sinh hoặc ghi đè token GitHub.
+
+Đặt `repositoryCredentials.enabled: true` trong `config.yaml`, giữ `urlPrefix: https://github.com/hoi3dkhoiche-byte/` với dấu `/` cuối. Prefix này bao phủ cả URL source và GitOps; helper/Helm từ chối prefix rộng hơn hoặc URL repo nằm ngoài phạm vi. Sau review/merge và `prepare.py --check`, bootstrap đồng bộ ExternalSecret `argocd-repositories` rồi chờ Ready trước khi cài Argo CD và tạo root. ESO tạo Secret `argocd-github-credentials` có label `argocd.argoproj.io/secret-type: repo-creds`, type Git và username/password từ AWS. Không có token trong manifest Git.
+
+Credential này dành cho Argo CD đọc Git; `GITOPS_TOKEN` của workflow source dùng để mở PR và cần quyền ghi khác. Việc clone checkout ban đầu trên máy quản trị cần quyền Git riêng, vì Argo CD chưa được cài ở giai đoạn đó. Nếu repo source private, đặt thêm Actions Secret **`SOURCE_READ_TOKEN` trong repo GitOps**, có quyền Contents: read của repo source, để workflow validation checkout chart ở đúng SHA. Secret AWS của Argo CD không tự cấp quyền cho GitHub runner.
+
+Argo CD chỉ dùng credential template khi repo không có credential riêng; credential riêng hoặc template có prefix dài hơn sẽ được ưu tiên. Kiểm tra cấu hình cũ khi chuyển private để tránh credential đã hết hạn che template mới. [Argo CD credential templates](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/#credential-templates)
+
 ## Nối CI với GitOps và promote
 
 Trong **repo source** `DevOps-retails-shop`, vào **Settings → Secrets and variables → Actions** và đặt:

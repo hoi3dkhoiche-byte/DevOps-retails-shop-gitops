@@ -77,6 +77,8 @@ Terraform quản lý AWS, IAM và bốn EKS managed add-on. Script bootstrap cà
 
 Secrets Manager → ESO → Kubernetes Secret → ứng dụng. Dev/prod/monitoring/Argo CD có IRSA reader riêng; không đưa mật khẩu hay AWS access key vào GitOps. Namespace SecretStore refresh mỗi 5 phút. Sau khi đổi credential và ESO đồng bộ xong, đổi `secretRevision` để các tiến trình đọc biến môi trường khởi động lại.
 
+Khi source hoặc GitOps chuyển private, bật `repositoryCredentials.enabled` và dùng ESO đồng bộ GitHub credential read-only từ `/retail/platform/argocd/repositories`. Một Secret `repo-creds` theo prefix `https://github.com/hoi3dkhoiche-byte/` cấp quyền đọc cả chart source và values GitOps; bootstrap chờ Secret này trước root Application. Token được operator điền vào AWS, không do backend Job tạo. Repo public giữ tùy chọn này tắt. Xem [hướng dẫn hai repo private](../README.md#quyền-đọc-cả-hai-repo-khi-chuyển-sang-private).
+
 | Dữ liệu | Cấu hình lưu trữ / khôi phục |
 | --- | --- |
 | Terraform state | Bucket có sẵn `manhnguyen1131`, key `retail/lab/terraform.tfstate`; versioning, mã hóa, S3 lockfile; không expiration |

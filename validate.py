@@ -12,6 +12,8 @@ import tempfile
 import yaml
 
 GITOPS = Path(__file__).resolve().parent
+sys.path.insert(0, str(GITOPS / "scripts"))
+from prepare import repository_credentials
 SOURCE = next((candidate for candidate in (GITOPS.parent / "retail-store-sample-app",
                                           Path.cwd() / "retail-store-sample-app")
                if (candidate / "src/ui/chart").is_dir()), GITOPS.parent / "retail-store-sample-app")
@@ -114,6 +116,7 @@ def validate_environment_order(documents):
 
 def validate_activation(config, temporary):
     actual = yaml.safe_load(config.read_text(encoding="utf-8"))
+    repository_credentials(actual)
     enabled = actual.get("deployment", {}).get("enabled")
     require(isinstance(enabled, bool), "config.yaml deployment.enabled must be a boolean")
     if enabled:
@@ -134,6 +137,30 @@ def validate_activation(config, temporary):
             current_values = [config] + ([GITOPS / "versions.yaml"] if chart == "bootstrap" else [])
             require(not render(GITOPS / chart, current_values), "Inactive repository emitted resources: " + chart)
     return actual
+
+
+def validate_repository_secrets(documents, config):
+    credentials = repository_credentials(config)
+    secrets = [document for document in documents if document["kind"] == "ExternalSecret"]
+    expected = {"argocd-secret", "argocd-redis"}
+    if credentials["enabled"]:
+        expected.add("argocd-github-credentials")
+    require({document["spec"]["target"]["name"] for document in secrets} == expected,
+            "Argo CD credentials must be supplied by the configured ESO ExternalSecrets")
+    repositories = [document for document in secrets if document["metadata"]["name"] == "argocd-repositories"]
+    require(len(repositories) == int(credentials["enabled"]), "Repository credential enablement mismatch")
+    if repositories:
+        spec = repositories[0]["spec"]
+        template = spec["target"]["template"]
+        require(template["metadata"]["labels"].get("argocd.argoproj.io/secret-type") == "repo-creds",
+                "Argo CD needs a repo-creds Secret label")
+        require(template["data"] == {"type": "git", "url": credentials["urlPrefix"],
+                                    "username": "{{ .username }}", "password": "{{ .password }}"},
+                "Repository credential Secret must reference ESO data and the shared URL prefix")
+        require({(item["secretKey"], item["remoteRef"]["key"], item["remoteRef"]["property"])
+                 for item in spec["data"]} == {
+                    (key, "/retail/platform/argocd/repositories", key) for key in ("username", "password")},
+                "Repository credentials must come from the dedicated Secrets Manager path")
 
 
 def validate_source_checkout(source, release):
@@ -209,8 +236,12 @@ def main():
         bootstrap = render(GITOPS / "bootstrap", [config, GITOPS / "versions.yaml"])
         validate_bootstrap_order(bootstrap)
         argocd_secrets = render(GITOPS / "argocd-secrets", [config])
-        require({document["spec"]["target"]["name"] for document in argocd_secrets if document["kind"] == "ExternalSecret"}
-                == {"argocd-secret", "argocd-redis"}, "Argo CD admin, TLS and Redis credentials must be supplied by ESO")
+        validate_repository_secrets(argocd_secrets, json.loads(config.read_text(encoding="utf-8")))
+        private_config = offline_target_config()
+        private_config["repositoryCredentials"] = {"enabled": True, "urlPrefix": "https://github.com/hoi3dkhoiche-byte/"}
+        private_target = temporary / "private-repositories.json"
+        private_target.write_text(json.dumps(private_config), encoding="utf-8")
+        validate_repository_secrets(render(GITOPS / "argocd-secrets", [private_target]), private_config)
         storage = next(document for document in bootstrap if document["kind"] == "StorageClass")
         require(int(storage["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"]) < 0, "StorageClass must exist before monitoring PVCs")
         grafana_secret = next(document for document in bootstrap if document["kind"] == "ExternalSecret" and document["metadata"]["name"] == "grafana-admin")

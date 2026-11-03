@@ -3,6 +3,9 @@ gitopsRevision: main
 deployment:
   enabled: false
 sourceRepo: https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop.git
+repositoryCredentials:
+  enabled: false
+  urlPrefix: https://github.com/hoi3dkhoiche-byte/
 region: ap-southeast-1
 clusterName: retail-lab-eks
 vpcId: REPLACE_FROM_TERRAFORM

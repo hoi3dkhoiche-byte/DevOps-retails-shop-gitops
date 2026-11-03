@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import yaml
+from prepare import repository_credentials
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/release"))
@@ -25,6 +26,7 @@ def main():
         validate_release(recorded)
         require(recorded == release, "Dev differs from its recorded CI release")
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    repository_credentials(config)
     enabled = config.get("deployment", {}).get("enabled")
     require(type(enabled) is bool, "deployment.enabled must be a boolean")
     if enabled:

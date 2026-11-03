@@ -15,6 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = ("lb", "autoscaler", "rollouts", "eso-dev", "eso-prod", "eso-monitoring", "eso-argocd", "grafana", "loki", "velero")
 ROLE_ANNOTATION = "eks.amazonaws.com/role-arn"
+REPOSITORY_PREFIX = "https://github.com/hoi3dkhoiche-byte/"
 
 
 class ReadableDumper(yaml.SafeDumper):
@@ -89,6 +90,23 @@ def validate(config, enabled=False):
                              config.get("certificateArn", "")) is not None,
                 "HTTPS requires a validated ACM certificate in this account/region")
     require("REPLACE_" not in serialize(config), "Unfilled values remain in config.yaml")
+    repository_credentials(config)
+
+
+def repository_credentials(config):
+    credentials = config.get("repositoryCredentials", {"enabled": False})
+    require(isinstance(credentials, dict), "repositoryCredentials must be a YAML mapping")
+    require(set(credentials) <= {"enabled", "urlPrefix"},
+            "repositoryCredentials accepts metadata only; store username/password in Secrets Manager")
+    require(type(credentials.get("enabled")) is bool, "repositoryCredentials.enabled must be a boolean")
+    if credentials["enabled"]:
+        require(credentials.get("urlPrefix") == REPOSITORY_PREFIX,
+                "Repository credential URL prefix must be " + REPOSITORY_PREFIX + " including the trailing slash")
+        for name in ("sourceRepo", "gitopsRepo"):
+            require(re.fullmatch(re.escape(REPOSITORY_PREFIX) + r"[A-Za-z0-9][A-Za-z0-9_.-]*\.git",
+                                 str(config.get(name, ""))) is not None,
+                    "Repository credentials must cover the HTTPS .git URL in " + name)
+    return credentials
 
 
 def trust_material():

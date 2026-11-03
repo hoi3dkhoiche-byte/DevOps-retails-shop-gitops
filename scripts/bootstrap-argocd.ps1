@@ -63,7 +63,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "External Secrets Operator did not become ready." }
     $credentialManifest | & kubectl --kubeconfig $Kubeconfig --context $Context apply -f -
     if ($LASTEXITCODE -ne 0) { throw "Could not declare Argo CD credential references." }
-    & kubectl --kubeconfig $Kubeconfig --context $Context -n argocd wait externalsecret/argocd-admin externalsecret/argocd-redis --for=condition=Ready --timeout=5m
+    $credentialResources = @("externalsecret/argocd-admin", "externalsecret/argocd-redis")
+    if ($gitopsConfig.repositoryCredentials.enabled -eq $true) {
+        $credentialResources += "externalsecret/argocd-repositories"
+    }
+    & kubectl --kubeconfig $Kubeconfig --context $Context -n argocd wait @credentialResources --for=condition=Ready --timeout=5m
     if ($LASTEXITCODE -ne 0) { throw "Argo CD credentials have not synchronized from Secrets Manager." }
     & helm upgrade --install argocd argo-cd --repo $versions.'argo-cd'.repository --version $versions.'argo-cd'.version --namespace argocd --create-namespace --kubeconfig $Kubeconfig --kube-context $Context -f platform/argo-cd.yaml --wait --timeout 15m
     if ($LASTEXITCODE -ne 0) { throw "Argo CD installation did not become ready." }

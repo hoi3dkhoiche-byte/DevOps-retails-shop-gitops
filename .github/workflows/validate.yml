@@ -36,6 +36,7 @@ jobs:
           repository: hoi3dkhoiche-byte/DevOps-retails-shop
           ref: ${{ steps.release.outputs.source_commit }}
           path: .local/source
+          token: ${{ secrets.SOURCE_READ_TOKEN || github.token }}
           persist-credentials: false
       - name: Install pinned Helm
         uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
@@ -49,6 +50,7 @@ jobs:
           repository: hoi3dkhoiche-byte/DevOps-retails-shop
           ref: ${{ steps.release.outputs.prod_source_commit }}
           path: .local/production-source
+          token: ${{ secrets.SOURCE_READ_TOKEN || github.token }}
           persist-credentials: false
       - name: Test release, acceptance and activation contracts
         run: |

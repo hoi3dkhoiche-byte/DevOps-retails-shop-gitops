@@ -1,3 +1,6 @@
 roles: {}
+repositoryCredentials:
+  enabled: false
+  urlPrefix: https://github.com/hoi3dkhoiche-byte/
 deployment:
   enabled: false
