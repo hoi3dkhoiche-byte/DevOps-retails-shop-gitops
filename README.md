@@ -112,7 +112,15 @@ kubectl --context retail-lab-eks -n argocd port-forward service/argocd-server 84
 kubectl --context retail-lab-eks -n monitoring port-forward service/kube-prometheus-stack-grafana 3000:80
 ```
 
-Khi có domain/ACM, `dev.retail.<domain>` và `retail.<domain>` dùng ALB HTTPS chung; dev giới hạn IP quản trị. Khi chưa có domain, dev truy cập bằng port-forward; HTTP ALB của production lab chỉ cho phép IP quản trị và chỉ xuất hiện khi production release bật. Route 53 alias cần trỏ đến ALB do controller tạo.
+Khi có domain/ACM, `dev.retail.<domain>` và `retail.<domain>` dùng ALB HTTPS chung, group `retail-public`; dev giới hạn IP quản trị. Khi chưa có domain, mỗi môi trường có release được bật dùng ALB HTTP riêng, group `retail-dev` hoặc `retail-prod`, chỉ cho phép `adminCidrs`. Tách group để hai rule không có hostname cùng path `/` không định tuyến nhầm môi trường. Production chưa có release thì chưa có ALB production. Request và response của web app đi qua ALB; worker/Pod giữ trong private subnets cùng VPC với ALB public. Port-forward là đường quản trị riêng. Route 53 alias cần trỏ đến ALB do controller tạo khi dùng domain.
+
+Lấy hostname ALB của dev sau bootstrap và sync thành công:
+
+```powershell
+kubectl --context retail-lab-eks -n retail-dev get ingress retail-ui -o wide
+```
+
+Không có domain thì mở `http://<hostname-ALB>` từ IP nằm trong `adminCidrs`. Controller tự quản lý frontend/backend Security Group và target Pod IP; `enableBackendSecurityGroup: true` được đặt tường minh. Cần nghiệm thu SG/target health và giới hạn IP trên AWS sau deploy; manifest render chưa chứng minh luồng mạng runtime.
 
 Credential đi từ Secrets Manager → ESO → Kubernetes Secret. Sau khi rotate credential, cập nhật `secretRevision` trong values để restart ứng dụng đọc biến môi trường. File PEM/PKCS12 kèm repo chỉ chứa CA công khai; `changeit` của truststore không bảo vệ private key hay mật khẩu ứng dụng.
 

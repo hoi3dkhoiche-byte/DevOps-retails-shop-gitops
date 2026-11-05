@@ -71,7 +71,11 @@ UI dùng Rollout Blue/Green, `ui-active` và `ui-preview`, preview một replica
 
 Prod là tên môi trường triển khai trong lab. Một worker và một replica/service chưa đáp ứng HA ứng dụng. Nâng lên mục tiêu chịu lỗi cần ít nhất hai worker/replica phù hợp, phân tán node/AZ và kiểm tra cả backend/monitoring/egress.
 
-Nếu có domain: một ALB public dùng group `retail-public`; `dev.retail.<domain>` và `retail.<domain>`, ACM cùng region, HTTPS và redirect HTTP. Rule dev giới hạn source IP quản trị. Nếu chưa có domain: prod dùng ALB HTTP giới hạn IP; dev, UI preview, Argo CD và Grafana dùng port-forward. Ingress prod chỉ được tạo khi release prod đã bật; cấu hình ban đầu chưa có Ingress này. AWS Load Balancer Controller tạo ALB; không tạo thêm ALB bằng Terraform. Route 53 alias đến ALB cần cấu hình sau khi có hostname thực tế.
+Nếu có domain: một ALB public dùng group `retail-public`; `dev.retail.<domain>` và `retail.<domain>`, ACM cùng region, HTTPS và redirect HTTP. Rule dev giới hạn source IP quản trị. Nếu chưa có domain: dev và prod dùng ALB HTTP riêng theo group `retail-dev`/`retail-prod`, chỉ cho phép IP quản trị. Mỗi Ingress chỉ xuất hiện khi deployment và release của môi trường đã bật; production ban đầu vẫn chưa có Ingress. Không gộp hai rule không có hostname cùng `/` vào một ALB. UI preview, Argo CD và Grafana dùng port-forward cho quản trị.
+
+ALB nằm ở public subnets; worker/Pod ở private app subnets trong cùng VPC. Request từ người dùng vào ALB được chuyển tới Pod IP qua target group, response của kết nối đó quay lại ALB rồi về client. Không cần chuyển worker vào subnet public hoặc đặt ALB làm default route. NAT xử lý kết nối Internet mới từ private subnet; DNS, backend và monitoring là các luồng khác. Controller bật backend Security Group tường minh và quản lý target-SG rules; NetworkPolicy theo public subnet CIDRs bổ sung giới hạn Pod, không đại diện cho danh tính SG của ALB.
+
+AWS Load Balancer Controller tạo ALB; không tạo thêm ALB bằng Terraform. Route 53 alias đến ALB cần cấu hình sau khi có hostname thực tế. Nghiệm thu runtime cần xác nhận worker không có public IP, targets Healthy, rule SG có nguồn backend SG của controller, URL ALB truy cập được từ IP quản trị và bị chặn từ ngoài allowlist.
 
 ## Platform, secret và backup
 
