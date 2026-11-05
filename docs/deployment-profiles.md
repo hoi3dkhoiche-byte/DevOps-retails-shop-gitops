@@ -37,4 +37,6 @@ Lệnh tải đúng chart version/appVersion trong `versions.yaml`, render cả 
 
 Lab phải giữ tổng requests cộng pod thay thế trong **1400m CPU/4GiB RAM**, tổng memory limits cộng pod thay thế trong **6GiB** và tối đa 21 platform pod kể cả thay thế. Như vậy còn ít nhất 600m CPU/2GiB cho hệ điều hành, EKS add-on và system pod trên node 2 vCPU/8GiB. Bộ chart hiện render 17 platform pod kể cả hook, requests 880m/1968MiB và limits RAM 4384MiB trước pod thay thế. Đây là bằng chứng cấu hình/scheduling offline, không phải số RAM/CPU đã đo khi chạy thật hoặc bảo đảm ứng dụng chịu tải.
 
-Workflow GitOps chạy gate này trên PR/push. Không gọi AWS/Kubernetes và không tạo cluster trong validation. Lab không có log tập trung, Velero hoặc lưu metrics lâu dài; nghiệm thu backup/restore, alert delivery và production cần architecture cùng phép thử vận hành thật.
+Architecture cũng có gate cho node management ban đầu 4 vCPU/16Gi: requests cộng một Pod thay thế tối đa 3000m CPU/12Gi RAM, tối đa 32 platform Pod kể cả thay thế; dành 1 vCPU/4Gi cho OS và EKS add-on. Memory limits của bộ đầy đủ có thể oversubscribe; report ghi rõ trạng thái này, không đánh đồng limit với request khi tính scheduling. Phải đo áp lực bộ nhớ thực tế khi nghiệm thu AWS.
+
+Workflow GitOps chạy gate này trên PR/push và giữ report/log 30 ngày. Không gọi AWS/Kubernetes và không tạo cluster trong validation. Lab không có log tập trung, Velero hoặc lưu metrics lâu dài; nghiệm thu backup/restore, alert delivery và production cần architecture cùng phép thử vận hành thật.

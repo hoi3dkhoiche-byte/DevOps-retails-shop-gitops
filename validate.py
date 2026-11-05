@@ -16,6 +16,8 @@ sys.path.insert(0, str(GITOPS / "scripts"))
 from prepare import repository_credentials
 from profiles import deployment_profile, platform_charts, values_files
 from platform_budget import validate_budget
+from release_inputs import require_production_acceptance
+from release import release_from_values
 SOURCE = next((candidate for candidate in (GITOPS.parent / "retail-store-sample-app",
                                           Path.cwd() / "retail-store-sample-app")
                if (candidate / "src/ui/chart").is_dir()), GITOPS.parent / "retail-store-sample-app")
@@ -335,6 +337,8 @@ def main():
         release.write_text(json.dumps({"release": {"enabled": True, "source_commit": "a" * 40, "backend_profile": "mysql-redis-opensearch"}, "images": {service: {"repository": "docker.io/hmannnguye/devops-retails-shop" + ("" if service == "ui" else "-" + service), "digest": "sha256:" + "b" * 64} for service in SERVICES}}))
         for environment in ("dev", "prod"):
             seed = validate_release(GITOPS / "environments" / environment / "images.yaml")
+            if environment == "prod":
+                require_production_acceptance(GITOPS, release_from_values(seed, allow_disabled=True))
             source = args.prod_source.resolve() if environment == "prod" and args.prod_source else SOURCE
             validate_source_checkout(source, seed)
             disabled = render(GITOPS / "applications", [config, GITOPS / "environments" / environment / "images.yaml"], {"environment": environment})

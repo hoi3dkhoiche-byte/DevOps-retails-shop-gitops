@@ -97,7 +97,7 @@ Khi dev đã hoạt động và UI hoàn tất Blue/Green, chạy nghiệm thu t
 python scripts/release/accept_dev.py --images environments/dev/images.yaml --output environments/dev/accepted.json --context retail-lab-eks --operator YOUR_NAME
 ```
 
-Nếu dùng kubeconfig riêng của bootstrap, đặt `$env:KUBECONFIG` tới đường dẫn tuyệt đối `.local/kubeconfig.yaml` trước khi chạy. Helper kiểm tra workload, digest/image ID thực tế, UI active và smoke API; cần kubectl, Docker buildx và quyền đọc registry. Review/commit `accepted.json`, rồi chạy thủ công workflow **Retail GitOps** ở repo source với `expected_dev_commit` bằng full SHA đã nghiệm thu. PR production dùng đúng bộ năm digest đó. Sau merge, sync production và promote UI thủ công; không build một bộ image mới.
+Nếu dùng kubeconfig riêng của bootstrap, đặt `$env:KUBECONFIG` tới đường dẫn tuyệt đối `.local/kubeconfig.yaml` trước khi chạy. Helper kiểm tra workload, digest/image ID thực tế, UI active và smoke API; cần kubectl, Docker buildx và quyền đọc registry. Review/commit `accepted.json`, rồi chạy thủ công workflow **Retail GitOps** ở repo source với `expected_dev_commit` bằng full SHA đã nghiệm thu. PR production cập nhật đồng thời bộ năm digest và bản sao bằng chứng dev tại `environments/prod/accepted.json`. CI GitOps từ chối production thiếu proof hoặc khác SHA/run/attempt/digest; proof của production vẫn được giữ khi dev lên release mới. Sau merge, sync production và promote UI thủ công; không build một bộ image mới.
 
 Để rollback, revert thay đổi image về bộ digest đã nghiệm thu trước đó và sync; UI đang chờ promote có thể abort Rollout. Xem thêm [release helpers](scripts/release/README.md). Không dùng `deployment.enabled: false` như cơ chế rollback: các tài nguyên đã tồn tại không tự bị xóa khi root không prune.
 
@@ -129,4 +129,6 @@ python -B -m unittest discover -s tests -p 'test_*.py' -v
 python validate.py --source ../DevOps-retails-shop/retail-store-sample-app
 ```
 
-Workflow chạy các kiểm tra này trên Linux với chart đúng source SHA. Khi AWS chưa kích hoạt, validator xác minh chart thật không sinh resource, từ chối kích hoạt với placeholder, rồi dùng cấu hình thử tạm thời để render đầy đủ; không ghi ID thử vào `config.yaml`. Kiểm tra offline không thay thế nghiệm thu trên EKS. Khi cấu hình branch protection, dùng check `validate` của **GitOps validation** làm required check cho `main`.
+Workflow chạy các kiểm tra này trên Ubuntu 24.04/Python 3.12, dependency có SHA256 và chart đúng source SHA. Mỗi suite bắt buộc ghi số test thực chạy; 0 test, skip hoặc test lỗi đều làm gate thất bại. Logs, JSON số test và budget platform được giữ 30 ngày trong artifact `gitops-validation-<run-id>-<attempt>`, kể cả khi các bước kiểm tra lỗi.
+
+Khi AWS chưa kích hoạt, validator xác minh chart thật không sinh resource, từ chối kích hoạt với placeholder, rồi dùng cấu hình thử tạm thời để render đầy đủ; không ghi ID thử vào `config.yaml`. Kiểm tra offline không thay thế nghiệm thu trên EKS. Khi cấu hình branch protection, dùng check **`gitops-required`** của **GitOps validation** làm required check cho `main`. Gate tổng hợp luôn chạy và chỉ xanh khi toàn bộ job validate thành công; failure/cancel/skip không được coi là đạt.

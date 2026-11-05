@@ -138,4 +138,21 @@ def validate_budget(documents, profile):
             raise ValueError("Lab management platform pod budget leaves insufficient room for EKS add-ons")
         report["reserved_for_system_cpu_millicores"] = 600
         report["reserved_for_system_memory_mib"] = 2048
+    elif profile == "architecture":
+        # The initial management node has 4 vCPU/16Gi. Reserve 1 vCPU/4Gi
+        # for the OS and EKS add-ons; include one replacement controller.
+        if totals["requests_cpu"] + largest["requests_cpu"] > 3000:
+            raise ValueError("Architecture management CPU requests plus replacement exceed 3000m")
+        if totals["requests_memory"] + largest["requests_memory"] > 12 * 1024**3:
+            raise ValueError("Architecture management memory requests plus replacement exceed 12Gi")
+        if report["pods_on_management_including_hooks"] + 1 > 32:
+            raise ValueError("Architecture management platform pod budget exceeds 32 including replacement")
+        report["reserved_for_system_cpu_millicores"] = 1000
+        report["reserved_for_system_memory_mib"] = 4096
+        # Limits may be oversubscribed in the full design. They are reported;
+        # scheduling uses requests and runtime pressure still needs live testing.
+        report["memory_limits_oversubscribed_with_replacement"] = (
+            totals["limits_memory"] + largest["limits_memory"] > 12 * 1024**3)
+    else:
+        raise ValueError("Unknown deployment profile: " + str(profile))
     return report

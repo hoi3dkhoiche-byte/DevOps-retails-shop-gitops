@@ -7,6 +7,7 @@ import sys
 
 import yaml
 from prepare import repository_credentials
+from release_inputs import require_production_acceptance
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/release"))
@@ -19,6 +20,7 @@ def main():
         path = ROOT / "environments" / environment / "images.yaml"
         values[environment] = release_from_values(parse_json(path.read_text(encoding="utf-8")), allow_disabled=True)
     require(values["dev"] is not None, "Dev must reference a verified five-image CI release")
+    require_production_acceptance(ROOT, values["prod"])
     release = values["dev"]
     snapshot = ROOT / "releases" / (release["run"]["id"] + "-" + release["run"]["attempt"]) / "images.json"
     if snapshot.is_file():

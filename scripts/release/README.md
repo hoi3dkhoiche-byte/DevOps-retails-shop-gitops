@@ -10,7 +10,9 @@ python scripts/release/accept_dev.py --images environments/dev/images.yaml --out
 
 The operator needs access to `retail-dev`, `kubectl`, Docker buildx and registry read access. The script verifies the five exact image digests/config IDs, workload readiness, active UI Rollout and application smoke endpoints. It discovers the HTTP Service port from the Kubernetes API, including the GitOps Services on port 8080. Missing, ambiguous or non-TCP Service ports stop acceptance. No acceptance proof is fabricated from CI results alone.
 
-Review and commit the resulting `environments/dev/accepted.json`. Source workflow **Retail GitOps** can then propose production using the same accepted source SHA and five immutable digests. It requires Actions Variable `GITOPS_ENABLED=true` and Secret `GITOPS_TOKEN` in the source repository. The token needs Contents and Pull requests read/write access to this GitOps repository; keep its value outside Git. Production synchronization and UI promotion remain manual.
+Review and commit the resulting `environments/dev/accepted.json`. Source workflow **Retail GitOps** can then propose production using the same accepted source SHA and five immutable digests. The production PR atomically writes both `environments/prod/images.yaml` and the unchanged dev proof at `environments/prod/accepted.json`. GitOps validation requires that proof for every enabled production release; it remains valid independently when dev advances. Revert both files together to roll back production.
+
+The source workflow requires Actions Variable `GITOPS_ENABLED=true` and Secret `GITOPS_TOKEN`. The token needs Contents and Pull requests read/write access to this GitOps repository; keep its value outside Git. Production synchronization and UI promotion remain manual.
 
 The underlying `release.py` validates provenance and manages generated image PRs. It targets only the fixed source and GitOps repositories in this project; it does not build images or apply Kubernetes resources.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the exact pinned platform charts and enforce the small lab node budget."""
+"""Render exact pinned platform charts and enforce each management node budget."""
 import argparse
 import json
 from pathlib import Path

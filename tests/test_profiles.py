@@ -131,6 +131,23 @@ class CapacityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "memory limits"):
             validate_budget([workload([container(limit="4Gi")])], "lab")
 
+    def test_full_profile_reserves_system_capacity_and_counts_replacement(self):
+        with self.assertRaisesRegex(ValueError, "CPU requests"):
+            validate_budget([workload([container(cpu="1600m")])], "architecture")
+        with self.assertRaisesRegex(ValueError, "memory requests"):
+            validate_budget([workload([container(memory="7Gi", limit="8Gi")])], "architecture")
+        document = workload([container(cpu="10m")])
+        document["spec"]["replicas"] = 32
+        with self.assertRaisesRegex(ValueError, "pod budget"):
+            validate_budget([document], "architecture")
+
+    def test_full_profile_reports_limit_oversubscription_without_confusing_requests(self):
+        result = validate_budget([workload([container(cpu="100m", memory="1Gi", limit="8Gi")])], "architecture")
+        self.assertEqual(result["reserved_for_system_memory_mib"], 4096)
+        self.assertTrue(result["memory_limits_oversubscribed_with_replacement"])
+        with self.assertRaisesRegex(ValueError, "Unknown"):
+            validate_budget([workload([container()])], "invalid")
+
     def test_prometheus_operator_created_pods_are_counted(self):
         operator = workload([container("operator")])
         operator["spec"]["template"]["spec"]["containers"][0]["args"] = [
