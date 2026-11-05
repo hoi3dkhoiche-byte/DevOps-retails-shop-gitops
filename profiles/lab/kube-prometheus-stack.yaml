@@ -1,0 +1,35 @@
+# Ephemeral metrics are sufficient for a create -> verify -> delete lab.
+alertmanager:
+  enabled: false
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    retentionSize: 512MB
+    scrapeInterval: 60s
+    evaluationInterval: 60s
+    resources:
+      requests: {cpu: 300m, memory: 768Mi}
+      limits: {cpu: 1000m, memory: 1536Mi}
+    storageSpec:
+      volumeClaimTemplate: null
+      emptyDir:
+        sizeLimit: 2Gi
+grafana:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+  persistence:
+    enabled: false
+  additionalDataSources: []
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 300m, memory: 128Mi}
+kube-state-metrics:
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 100m, memory: 64Mi}
+prometheus-node-exporter:
+  resources:
+    requests: {cpu: 10m, memory: 16Mi}
+    limits: {cpu: 100m, memory: 32Mi}

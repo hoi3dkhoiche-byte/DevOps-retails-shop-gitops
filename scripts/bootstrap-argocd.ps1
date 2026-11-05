@@ -18,6 +18,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Could not read the prepared target configuration." }
     $versions = (& $Python -c "import json,yaml; print(json.dumps(yaml.safe_load(open('versions.yaml', encoding='utf-8-sig'))))") | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw "Could not read pinned platform versions." }
+    $esoValues = @('-f', 'platform/external-secrets.yaml')
+    $argoValues = @('-f', 'platform/argo-cd.yaml')
+    if ($gitopsConfig.deploymentProfile -eq 'lab') {
+        $esoValues += @('-f', 'profiles/lab/external-secrets.yaml')
+        $argoValues += @('-f', 'profiles/lab/argo-cd.yaml')
+    }
     $rootApp = (& $Python -c "import json,yaml; print(json.dumps(yaml.safe_load(open('argocd/retail-root.yaml', encoding='utf-8-sig'))))") | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw "Could not read argocd/retail-root.yaml." }
     if ($rootApp.metadata.name -ne "retail-root" -or $rootApp.metadata.namespace -ne "argocd" -or
@@ -59,7 +65,7 @@ try {
     $allowed = & kubectl --kubeconfig $Kubeconfig --context $Context auth can-i '*' '*' --all-namespaces
     if ($LASTEXITCODE -ne 0 -or $allowed.Trim() -ne "yes") { throw "Bootstrap needs the administration EKS Access Entry." }
     # ESO comes first so Argo CD's initial credentials originate in Secrets Manager.
-    & helm upgrade --install external-secrets external-secrets --repo $versions.'external-secrets'.repository --version $versions.'external-secrets'.version --namespace external-secrets --create-namespace --kubeconfig $Kubeconfig --kube-context $Context -f platform/external-secrets.yaml --wait --timeout 15m
+    & helm upgrade --install external-secrets external-secrets --repo $versions.'external-secrets'.repository --version $versions.'external-secrets'.version --namespace external-secrets --create-namespace --kubeconfig $Kubeconfig --kube-context $Context @esoValues --wait --timeout 15m
     if ($LASTEXITCODE -ne 0) { throw "External Secrets Operator did not become ready." }
     $credentialManifest | & kubectl --kubeconfig $Kubeconfig --context $Context apply -f -
     if ($LASTEXITCODE -ne 0) { throw "Could not declare Argo CD credential references." }
@@ -69,7 +75,7 @@ try {
     }
     & kubectl --kubeconfig $Kubeconfig --context $Context -n argocd wait @credentialResources --for=condition=Ready --timeout=5m
     if ($LASTEXITCODE -ne 0) { throw "Argo CD credentials have not synchronized from Secrets Manager." }
-    & helm upgrade --install argocd argo-cd --repo $versions.'argo-cd'.repository --version $versions.'argo-cd'.version --namespace argocd --create-namespace --kubeconfig $Kubeconfig --kube-context $Context -f platform/argo-cd.yaml --wait --timeout 15m
+    & helm upgrade --install argocd argo-cd --repo $versions.'argo-cd'.repository --version $versions.'argo-cd'.version --namespace argocd --create-namespace --kubeconfig $Kubeconfig --kube-context $Context @argoValues --wait --timeout 15m
     if ($LASTEXITCODE -ne 0) { throw "Argo CD installation did not become ready." }
     & kubectl --kubeconfig $Kubeconfig --context $Context apply -f argocd/retail-root.yaml
     if ($LASTEXITCODE -ne 0) { throw "Could not create the root GitOps Application." }

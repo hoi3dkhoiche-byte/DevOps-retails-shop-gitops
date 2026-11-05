@@ -69,6 +69,36 @@ grafana:
       enabled: true
       label: grafana_dashboard
       searchNamespace: monitoring
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  initChownData:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+  downloadDashboards:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
 alertmanager:
   alertmanagerSpec:
     nodeSelector:
@@ -88,6 +118,13 @@ alertmanager:
           resources:
             requests:
               storage: 2Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
 prometheusOperator:
   nodeSelector:
     workload: management
@@ -105,6 +142,28 @@ prometheusOperator:
         operator: Equal
         value: management
         effect: NoSchedule
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  prometheusConfigReloader:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
 kube-state-metrics:
   nodeSelector:
     workload: management
@@ -113,9 +172,23 @@ kube-state-metrics:
     operator: Equal
     value: management
     effect: NoSchedule
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
 prometheus-node-exporter:
   tolerations:
   - operator: Exists
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
 crds:
   upgradeJob:
     nodeSelector:
@@ -125,3 +198,10 @@ crds:
       operator: Equal
       value: management
       effect: NoSchedule
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi

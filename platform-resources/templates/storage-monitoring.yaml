@@ -1,5 +1,5 @@
 {{- if include "retail.deploymentEnabled" . }}
-{{- range $environment := list "dev" "prod" }}
+{{- range $environment := ternary (list "dev") (list "dev" "prod") (eq (.Values.deploymentProfile | default "architecture") "lab") }}
 {{- range $service := list "ui" "catalog" "carts" "checkout" "orders" }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -54,10 +54,12 @@ spec:
           for: 2m
           labels: {severity: critical}
           annotations: {summary: "Retail UI rollout is degraded"}
+{{- if ne (.Values.deploymentProfile | default "architecture") "lab" }}
         - alert: RetailBackupFailed
           expr: increase(velero_backup_failure_total[24h]) > 0
           labels: {severity: critical}
           annotations: {summary: "Velero backup failed"}
+{{- end }}
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -77,6 +79,7 @@ spec:
       honorLabels: true
       path: /metrics
       interval: 30s
+{{- if ne (.Values.deploymentProfile | default "architecture") "lab" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -94,4 +97,5 @@ spec:
     - port: http-monitoring
       path: /metrics
       interval: 30s
+{{- end }}
 {{- end }}

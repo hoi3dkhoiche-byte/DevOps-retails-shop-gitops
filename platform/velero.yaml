@@ -28,6 +28,13 @@ initContainers:
   volumeMounts:
   - mountPath: /target
     name: plugins
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
 schedules:
   retail-daily:
     schedule: 0 19 * * *
@@ -43,3 +50,17 @@ schedules:
       excludedResources:
       - secrets
       snapshotVolumes: false
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+upgradeJobResources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi

@@ -58,3 +58,5 @@ jobs:
           python -B -m unittest discover -s tests -p 'test_*.py' -v
       - name: Validate activation guard and render application graphs
         run: python validate.py --source .local/source/retail-store-sample-app --prod-source .local/production-source/retail-store-sample-app
+      - name: Render pinned platform charts and enforce lab node capacity
+        run: python scripts/check-platforms.py --download --cache .local/platform-charts --report .local/platform-budget.json

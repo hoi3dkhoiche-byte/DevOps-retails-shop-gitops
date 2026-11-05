@@ -41,3 +41,18 @@ alloy:
     valueFrom:
       fieldRef:
         fieldPath: spec.nodeName
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+configReloader:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi

@@ -1,5 +1,5 @@
 {{- if include "retail.deploymentEnabled" . }}
-{{- range $env := list "dev" "prod" }}
+{{- range $env := ternary (list "dev") (list "dev" "prod") (eq (.Values.deploymentProfile | default "architecture") "lab") }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -74,6 +74,7 @@ spec:
     syncOptions: [CreateNamespace=true, ServerSideApply=true]
 {{- $namespaces := dict "argo-rollouts" "argo-rollouts" "aws-load-balancer-controller" "kube-system" "external-secrets" "external-secrets" "metrics-server" "kube-system" "cluster-autoscaler" "kube-system" "kube-prometheus-stack" "monitoring" "loki" "monitoring" "alloy" "monitoring" "velero" "velero" }}
 {{- range $chart, $namespace := $namespaces }}
+{{- if or (ne ($.Values.deploymentProfile | default "architecture") "lab") (not (has $chart (list "loki" "alloy" "velero" "cluster-autoscaler"))) }}
 {{- $version := index $.Values $chart }}
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -94,6 +95,9 @@ spec:
         skipTests: true
         valueFiles:
           - $values/platform/{{ $chart }}.yaml
+{{- if eq ($.Values.deploymentProfile | default "architecture") "lab" }}
+          - $values/profiles/lab/{{ $chart }}.yaml
+{{- end }}
     - repoURL: {{ $.Values.gitopsRepo | quote }}
       targetRevision: {{ $.Values.gitopsRevision | quote }}
       ref: values
@@ -103,5 +107,6 @@ spec:
   syncPolicy:
     automated: {selfHeal: true, prune: false}
     syncOptions: [CreateNamespace=true, ServerSideApply=true]
+{{- end }}
 {{- end }}
 {{- end }}

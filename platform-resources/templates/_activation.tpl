@@ -1,5 +1,13 @@
 {{/* Shared activation contract. Keep identical in all four local charts. */}}
 {{- define "retail.deploymentEnabled" -}}
+{{- $profile := "architecture" -}}
+{{- if hasKey .Values "deploymentProfile" -}}{{- $profile = .Values.deploymentProfile -}}{{- end -}}
+{{- if or (not (kindIs "string" $profile)) (not (has $profile (list "lab" "architecture"))) -}}
+{{- fail "deploymentProfile must be lab or architecture" -}}
+{{- end -}}
+{{- if and (eq $profile "lab") (eq (.Values.environment | default "") "prod") (.Values.release.enabled | default false) -}}
+{{- fail "Lab profile forbids production workloads; use architecture after dev acceptance" -}}
+{{- end -}}
 {{- if not (kindIs "bool" .Values.deployment.enabled) -}}
 {{- fail "deployment.enabled must be a boolean" -}}
 {{- end -}}

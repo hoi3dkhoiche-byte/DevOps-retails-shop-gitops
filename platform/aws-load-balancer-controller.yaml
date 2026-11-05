@@ -12,3 +12,10 @@ serviceAccount:
   create: true
   name: aws-load-balancer-controller
   annotations: {}
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

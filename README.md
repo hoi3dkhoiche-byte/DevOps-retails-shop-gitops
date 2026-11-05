@@ -20,6 +20,8 @@ Repo này lưu trạng thái triển khai cho EKS `retail-lab-eks` tại Singapo
 
 ## Các file cần đọc
 
+Repo mặc định `deploymentProfile: lab` cho môi trường tạo → kiểm tra → xóa. Xem [hai profile và budget management node](docs/deployment-profiles.md): lab giữ controllers/metrics cần cho dev, tắt log/backup/autoscaler và production. `architecture` giữ cấu hình đầy đủ. Profile là metadata riêng với backend profile của release; digest ứng dụng không đổi.
+
 | Đường dẫn | Vai trò |
 | --- | --- |
 | [docs/aws-architecture.md](docs/aws-architecture.md) | Cấu hình AWS đề xuất theo bản thiết kế và Terraform: node, database, Redis, MQ, OpenSearch, mạng và giới hạn của lab |
@@ -113,6 +115,8 @@ kubectl --context retail-lab-eks -n monitoring port-forward service/kube-prometh
 Khi có domain/ACM, `dev.retail.<domain>` và `retail.<domain>` dùng ALB HTTPS chung; dev giới hạn IP quản trị. Khi chưa có domain, dev truy cập bằng port-forward; HTTP ALB của production lab chỉ cho phép IP quản trị và chỉ xuất hiện khi production release bật. Route 53 alias cần trỏ đến ALB do controller tạo.
 
 Credential đi từ Secrets Manager → ESO → Kubernetes Secret. Sau khi rotate credential, cập nhật `secretRevision` trong values để restart ứng dụng đọc biến môi trường. File PEM/PKCS12 kèm repo chỉ chứa CA công khai; `changeit` của truststore không bảo vệ private key hay mật khẩu ứng dụng.
+
+Repo source có [playbook vận hành](https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop/blob/main/ansible/README.md): rotation được kiểm thử bằng staged version, dùng chung Lease bootstrap và tạo GitOps candidate chỉ thay `secretRevision` của một service/môi trường; operator review/merge rồi nghiệm thu rollout. Restore drill tạo đích cô lập, monitoring/backup acceptance ghi rõ phần kiểm tra thực tế và phần chờ người nhận alert xác nhận. Các playbook mặc định xem trước/read-only, không tự publish cấu hình hoặc promote production.
 
 Prometheus giữ 7 ngày/24GB trên PVC 30Gi. Loki dùng S3, giữ 7 ngày; Alloy thu log theo node. Velero backup Kubernetes resource 14 ngày, loại Secrets; RDS/Redis dùng backup riêng của AWS. Email/Telegram alert để tắt cho tới khi có receiver thật: thêm cấu hình vào `/retail/platform/alertmanager/config`, chạy prepare với `--terraform-output ... --enable-alerting` rồi review diff. RPO/RTO, failover, rotation và restore phải được đo trên AWS.
 

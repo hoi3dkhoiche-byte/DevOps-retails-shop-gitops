@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 import yaml
+from profiles import deployment_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = ("lb", "autoscaler", "rollouts", "eso-dev", "eso-prod", "eso-monitoring", "eso-argocd", "grafana", "loki", "velero")
@@ -59,6 +60,9 @@ def write_atomic(path, value):
 
 
 def validate(config, enabled=False):
+    profile = deployment_profile(config)
+    require(profile != "lab" or not config.get("alerting", {}).get("enabled"),
+            "Lab omits Alertmanager; use architecture for external alert delivery")
     require(isinstance(config.get("deployment", {}), dict), "deployment must be a YAML mapping")
     if enabled:
         require(config.get("deployment", {}).get("enabled") is True,
@@ -165,10 +169,14 @@ def prepare(outputs=None, domain=None, alerting=None, activate=False):
             require(source in values, "Missing Terraform output: " + source)
             config[target] = values[source]
         config["domain"] = values.get("domain", "")
+        config["deploymentProfile"] = values.get("deployment_profile", "architecture")
     if domain is not None:
         config["domain"] = domain
     if alerting is not None:
         config.setdefault("alerting", {})["enabled"] = alerting
+    require(original.get("deployment", {}).get("enabled") is not True
+            or deployment_profile(original) == deployment_profile(config),
+            "Changing a live deployment profile requires teardown first; optional Applications are not automatically pruned")
     config.setdefault("deployment", {})["enabled"] = bool(activate)
     validate(config)
     trust_material()

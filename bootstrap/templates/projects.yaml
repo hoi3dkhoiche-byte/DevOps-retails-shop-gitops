@@ -1,5 +1,5 @@
 {{- if include "retail.deploymentEnabled" . }}
-{{- range $env := list "dev" "prod" }}
+{{- range $env := ternary (list "dev") (list "dev" "prod") (eq (.Values.deploymentProfile | default "architecture") "lab") }}
 ---
 apiVersion: v1
 kind: Namespace

@@ -68,3 +68,11 @@ test:
   enabled: false
 lokiCanary:
   enabled: false
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi

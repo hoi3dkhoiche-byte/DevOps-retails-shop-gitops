@@ -14,12 +14,21 @@ import yaml
 GITOPS = Path(__file__).resolve().parent
 sys.path.insert(0, str(GITOPS / "scripts"))
 from prepare import repository_credentials
+from profiles import deployment_profile, platform_charts, values_files
+from platform_budget import validate_budget
 SOURCE = next((candidate for candidate in (GITOPS.parent / "retail-store-sample-app",
                                           Path.cwd() / "retail-store-sample-app")
                if (candidate / "src/ui/chart").is_dir()), GITOPS.parent / "retail-store-sample-app")
 SERVICES = ("ui", "catalog", "cart", "checkout", "orders")
 LOCAL_CHARTS = ("bootstrap", "applications", "argocd-secrets", "platform-resources")
 ROLE_NAMES = ("lb", "autoscaler", "rollouts", "eso-dev", "eso-prod", "eso-monitoring", "eso-argocd", "grafana", "loki", "velero")
+
+
+class RenderedLoader(getattr(yaml, "CSafeLoader", yaml.SafeLoader)):
+    """Safe loader accepting the bare '=' enum emitted by upstream CRD generators."""
+
+
+RenderedLoader.add_constructor("tag:yaml.org,2002:value", RenderedLoader.construct_scalar)
 
 
 def require(condition, message):
@@ -31,29 +40,33 @@ def sync_wave(document):
     return int(document["metadata"].get("annotations", {}).get("argocd.argoproj.io/sync-wave", "0"))
 
 
-def render(chart, values=(), parameters=None, namespace="default", release="retail-check", expect_failure=False):
+def render(chart, values=(), parameters=None, namespace="default", release="retail-check", expect_failure=False,
+           include_crds=False):
     command = ["helm", "template", release, str(chart), "--namespace", namespace, "--kube-version", "1.36.0", "--skip-tests"]
+    if include_crds:
+        command.append("--include-crds")
     for value in values:
         command.extend(["-f", str(value)])
     for name, value in (parameters or {}).items():
         command.extend(["--set-string", name + "=" + value])
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=90)
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", check=False, timeout=90)
     if expect_failure:
         require(result.returncode != 0, "Unprepared activation unexpectedly rendered: " + str(chart))
         require("Activation requires" in result.stderr or "Administration" in result.stderr
                 or "Placeholder/private" in result.stderr or "deployment.enabled" in result.stderr
-                or "controlled domain" in result.stderr,
+                or "controlled domain" in result.stderr or "deploymentProfile" in result.stderr
+                or "Lab profile" in result.stderr,
                 "Activation failed for an unrelated Helm error: " + result.stderr)
         return result.stderr
     require(result.returncode == 0, result.stderr)
-    return [document for document in yaml.safe_load_all(result.stdout) if document]
+    return [document for document in yaml.load_all(result.stdout, Loader=RenderedLoader) if document]
 
 
-def offline_target_config():
+def offline_target_config(profile="architecture"):
     """Explicit test fixture only; never write these values to config.yaml."""
     config = copy.deepcopy(yaml.safe_load((GITOPS / "config.yaml").read_text(encoding="utf-8")))
     account = "111122223333"
-    config.update(deployment={"enabled": True}, accountId=account, vpcId="vpc-11111111111111111",
+    config.update(deployment={"enabled": True}, deploymentProfile=profile, accountId=account, vpcId="vpc-11111111111111111",
                   nodeSecurityGroupId="sg-22222222222222222", ordersSecurityGroupId="sg-33333333333333333",
                   adminCidrs=["8.8.8.8/32"], domain="", certificateArn="",
                   roles={name: f"arn:aws:iam::{account}:role/offline-fixture-{name}" for name in ROLE_NAMES},
@@ -201,7 +214,7 @@ def validate_source_chart(service, environment, source=None, image=None):
         require(service + "-runtime" in secrets, "Missing ESO runtime credential reference")
 
 
-def validate_bootstrap_order(documents):
+def validate_bootstrap_order(documents, profile="architecture"):
     children = [document for document in documents if document["kind"] == "Application"]
     require(children, "Bootstrap has no child Applications")
     first_child_wave = min(sync_wave(document) for document in children)
@@ -211,10 +224,76 @@ def validate_bootstrap_order(documents):
         require(project is not None, "Bootstrap omitted a child Application's AppProject")
         require(sync_wave(project) < sync_wave(child), "AppProject must precede its child Applications to avoid sync deadlock")
     namespaces = [document for document in documents if document["kind"] == "Namespace"]
-    require({document["metadata"]["name"] for document in namespaces} >= {"retail-dev", "retail-prod"},
-            "Bootstrap must create both application namespaces")
+    expected_namespaces = {"retail-dev"} | ({"retail-prod"} if profile == "architecture" else set())
+    require({document["metadata"]["name"] for document in namespaces} >= expected_namespaces,
+            "Bootstrap must create its enabled application namespaces")
     require(all(sync_wave(document) < first_child_wave for document in namespaces),
             "Bootstrap namespaces must precede child Applications")
+
+
+def validate_profile_graph(profile, temporary):
+    config = offline_target_config(profile)
+    path = temporary / (profile + "-target.json")
+    path.write_text(json.dumps(config), encoding="utf-8")
+    documents = render(GITOPS / "bootstrap", [path, GITOPS / "versions.yaml"])
+    validate_bootstrap_order(documents, profile)
+    children = {document["metadata"]["name"]: document for document in documents if document["kind"] == "Application"}
+    expected = set(platform_charts(config)) | {"retail-argocd-secrets", "retail-platform-resources", "retail-dev-configuration"}
+    if profile == "architecture":
+        expected.add("retail-prod-configuration")
+    require(set(children) == expected, "Bootstrap platform Applications differ from the deployment profile")
+    for name in platform_charts(config):
+        relative = ["$values/" + value.relative_to(GITOPS).as_posix() for value in values_files(GITOPS, name, config)]
+        require(children[name]["spec"]["sources"][0]["helm"]["valueFiles"] == relative,
+                "Platform child lost its profile values: " + name)
+    monitors = render(GITOPS / "platform-resources", [path])
+    names = {document["metadata"]["name"] for document in monitors if document["kind"] == "PodMonitor"}
+    require(len(names) == (5 if profile == "lab" else 10), "PodMonitors must follow the enabled environments")
+    require((any(document.get("metadata", {}).get("name") == "velero" for document in monitors))
+            == (profile == "architecture"), "Velero monitoring must follow profile enablement")
+
+
+def validate_platform_profiles(cache):
+    versions = yaml.safe_load((GITOPS / "versions.yaml").read_text(encoding="utf-8"))
+    namespaces = {"argo-cd": "argocd", "argo-rollouts": "argo-rollouts", "external-secrets": "external-secrets",
+                  "velero": "velero", "aws-load-balancer-controller": "kube-system", "metrics-server": "kube-system",
+                  "cluster-autoscaler": "kube-system"}
+    reports = {}
+    for profile in ("lab", "architecture"):
+        config = {"deploymentProfile": profile}
+        documents = []
+        for name in ("argo-cd", *platform_charts(config)):
+            chart = cache / name / name
+            require((chart / "Chart.yaml").is_file(), "Missing pinned platform chart cache: " + name)
+            metadata = yaml.safe_load((chart / "Chart.yaml").read_text(encoding="utf-8"))
+            require(str(metadata["version"]) == str(versions[name]["version"])
+                    and str(metadata["appVersion"]).removeprefix("v") == str(versions[name]["appVersion"]).removeprefix("v"),
+                    "Platform chart cache does not match versions.yaml: " + name)
+            rendered = render(chart, values_files(GITOPS, name, config),
+                              namespace=namespaces.get(name, "monitoring"),
+                              release="argocd" if name == "argo-cd" else name, include_crds=True)
+            if name == "argo-cd":
+                require(not any(document["kind"] == "Secret" and document["metadata"]["name"] in {"argocd-secret", "argocd-redis"}
+                                for document in rendered), "Argo CD chart must preserve the ESO credential Secrets")
+                if profile == "lab":
+                    forbidden = {"dex-server", "notifications-controller", "applicationset-controller"}
+                    require(not any(document.get("metadata", {}).get("labels", {}).get("app.kubernetes.io/component") in forbidden
+                                    for document in rendered if document["kind"] in {"Deployment", "StatefulSet"}
+                                    and document.get("spec", {}).get("replicas", 1) > 0),
+                            "Unused Argo CD components must be disabled in lab")
+            documents.extend(rendered)
+        if profile == "lab":
+            require(any(document["kind"] == "CustomResourceDefinition"
+                        and document["metadata"]["name"] == "podmonitors.monitoring.coreos.com" for document in documents),
+                    "Lab must retain the PodMonitor CRD/operator for application monitoring")
+            require(not any(document["kind"] == "PersistentVolumeClaim" for document in documents),
+                    "Ephemeral lab monitoring must not provision persistent claims")
+            prometheus = next(document for document in documents if document["kind"] == "Prometheus")
+            require(prometheus["spec"]["retention"] == "6h"
+                    and prometheus["spec"]["retentionSize"] == "512MB"
+                    and "emptyDir" in prometheus["spec"]["storage"], "Lab metrics storage/retention is not bounded")
+        reports[profile] = validate_budget(documents, profile)
+    return reports
 
 
 def main():
@@ -229,6 +308,8 @@ def main():
     require((SOURCE / "src/ui/chart").is_dir(), "Supply the application chart checkout with --source PATH")
     with tempfile.TemporaryDirectory() as directory:
         temporary = Path(directory)
+        for profile in ("lab", "architecture"):
+            validate_profile_graph(profile, temporary)
         actual_config = GITOPS / "config.yaml"
         actual = validate_activation(actual_config, temporary)
         config = temporary / "offline-target.json"
@@ -273,12 +354,8 @@ def main():
                 validate_source_chart(service, environment, source, seed["images"].get(service))
         render(GITOPS / "platform-resources", [config])
     if args.platform_cache:
-        versions = yaml.safe_load((GITOPS / "versions.yaml").read_text())
-        for name in versions:
-            documents = render(args.platform_cache / name / name, [GITOPS / "platform" / (name + ".yaml")], release=name)
-            if name == "argo-cd":
-                require(not any(document["kind"] == "Secret" and document["metadata"]["name"] in {"argocd-secret", "argocd-redis"} for document in documents),
-                        "Argo CD chart must not create or overwrite the ESO credential Secrets")
+        budgets = validate_platform_profiles(args.platform_cache)
+        print("Rendered platform budgets: " + json.dumps(budgets, sort_keys=True))
     print("Activation guards passed; explicit offline fixture graph passed for five digest-pinned applications, both environments, routing, UI Rollout/HPA and bootstrap order. No account values were written or AWS resources deployed.")
 
 
