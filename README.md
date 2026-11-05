@@ -20,7 +20,7 @@ Repo này lưu trạng thái triển khai cho EKS `retail-lab-eks` tại Singapo
 
 ## Các file cần đọc
 
-Repo mặc định `deploymentProfile: lab` cho môi trường tạo → kiểm tra → xóa. Xem [hai profile và budget management node](docs/deployment-profiles.md): lab giữ controllers/metrics cần cho dev, tắt log/backup/autoscaler và production. `architecture` giữ cấu hình đầy đủ. Profile là metadata riêng với backend profile của release; digest ứng dụng không đổi.
+Repo mặc định `deploymentProfile: architecture`: bật đầy đủ controllers, Prometheus/Grafana/Alertmanager, Loki/Alloy, Velero, autoscaler và cấu hình cả dev/prod. Dex, Notifications và ApplicationSet của Argo CD cũng bật. Xem [hai profile và budget management node](docs/deployment-profiles.md); `lab` vẫn là lựa chọn rút gọn khi đặt tường minh. Profile là metadata riêng với backend profile của release; digest ứng dụng không đổi. Việc kích hoạt môi trường, nhập receiver/SSO và promote image production vẫn cần cấu hình và nghiệm thu thật.
 
 | Đường dẫn | Vai trò |
 | --- | --- |

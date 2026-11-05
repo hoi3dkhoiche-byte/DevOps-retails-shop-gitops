@@ -1,6 +1,6 @@
 # Cấu hình AWS cho Retail GitOps
 
-Các thông số đầy đủ dưới đây thuộc profile `architecture`. Repo hiện mặc định profile `lab` cho vòng tạo → kiểm tra → xóa, với node nhỏ và chỉ những controller cần cho dev; xem [hai profile và budget management](deployment-profiles.md). Profile lab không bật production, Loki/Alloy, Velero hoặc autoscaler, và metrics không lưu lâu dài.
+Các thông số đầy đủ dưới đây thuộc profile `architecture`, hiện là mặc định của repo. Profile này bật đủ platform, log tập trung, backup, autoscaler và cấu hình dev/prod; xem [hai profile và budget management](deployment-profiles.md). `lab` vẫn có thể chọn tường minh để giảm footprint: không bật production, Loki/Alloy, Velero hoặc autoscaler, và metrics không lưu lâu dài. Kích hoạt môi trường và promote release production là các bước riêng sau khi có hạ tầng và bằng chứng nghiệm thu thật.
 
 Phương án này triển khai bản thiết kế `Thiết kế kiến trúc chi tiết.docx` và hai quyết định đã chốt: **một RDS MySQL, tách database/user theo service và môi trường; giữ OpenSearch riêng cho tìm kiếm**. Các thông số dưới đây khớp code Terraform và values ứng dụng hiện có. Đây là cấu hình khởi đầu cho lab; chưa phải kết quả triển khai hay nghiệm thu AWS.
 

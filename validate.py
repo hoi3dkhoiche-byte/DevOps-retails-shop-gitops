@@ -275,12 +275,16 @@ def validate_platform_profiles(cache):
             if name == "argo-cd":
                 require(not any(document["kind"] == "Secret" and document["metadata"]["name"] in {"argocd-secret", "argocd-redis"}
                                 for document in rendered), "Argo CD chart must preserve the ESO credential Secrets")
+                optional_components = {"dex-server", "notifications-controller", "applicationset-controller"}
+                active_components = {document.get("metadata", {}).get("labels", {}).get("app.kubernetes.io/component")
+                                     for document in rendered if document["kind"] in {"Deployment", "StatefulSet"}
+                                     and document.get("spec", {}).get("replicas", 1) > 0}
                 if profile == "lab":
-                    forbidden = {"dex-server", "notifications-controller", "applicationset-controller"}
-                    require(not any(document.get("metadata", {}).get("labels", {}).get("app.kubernetes.io/component") in forbidden
-                                    for document in rendered if document["kind"] in {"Deployment", "StatefulSet"}
-                                    and document.get("spec", {}).get("replicas", 1) > 0),
+                    require(not optional_components & active_components,
                             "Unused Argo CD components must be disabled in lab")
+                else:
+                    require(optional_components <= active_components,
+                            "Architecture must enable Dex, Notifications and ApplicationSet controllers")
             documents.extend(rendered)
         if profile == "lab":
             require(any(document["kind"] == "CustomResourceDefinition"

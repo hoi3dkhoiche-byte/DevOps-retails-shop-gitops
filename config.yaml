@@ -2,7 +2,7 @@ gitopsRepo: https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop-gitops.git
 gitopsRevision: main
 deployment:
   enabled: false
-deploymentProfile: lab
+deploymentProfile: architecture
 sourceRepo: https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop.git
 repositoryCredentials:
   enabled: false

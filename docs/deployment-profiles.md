@@ -1,13 +1,13 @@
 # Chọn cấu hình lab hoặc architecture
 
-`deploymentProfile` trong `config.yaml` chọn footprint Kubernetes; `deployment.enabled` vẫn là công tắc kích hoạt riêng. Repo mặc định **lab, chưa kích hoạt**. Profile này dành cho vòng tạo môi trường → kiểm tra CI/CD/ứng dụng → xóa tài nguyên. Nó không thay đổi năm digest đã kiểm thử hay `release.backend_profile: mysql-redis-opensearch`.
+`deploymentProfile` trong `config.yaml` chọn footprint Kubernetes; `deployment.enabled` vẫn là công tắc kích hoạt riêng. Repo mặc định **architecture, chưa kích hoạt**: bật đầy đủ platform và cấu hình cả dev/prod theo thiết kế. `lab` vẫn có thể chọn tường minh để giảm footprint cho vòng tạo môi trường → kiểm tra → xóa tài nguyên. Hai profile không thay đổi năm digest đã kiểm thử hay `release.backend_profile: mysql-redis-opensearch`.
 
 | Thành phần | `lab` | `architecture` |
 | --- | --- | --- |
 | Worker dự kiến từ Terraform | Một management và một dev, mỗi node 2 vCPU/8GiB; không production | Management 4 vCPU/16GiB, dev/prod theo thiết kế đầy đủ |
 | Argo CD, ESO, LB Controller, Rollouts, metrics-server | Giữ, một replica cần thiết | Giữ |
-| Dex, Notifications | Tắt | Giữ hành vi chart hiện có |
-| ApplicationSet controller | `replicas: 0`; chart đã pin không có công tắc `enabled` | Giữ hành vi chart hiện có |
+| Dex, Notifications | Tắt | `enabled: true`; SSO và kênh thông báo cần cấu hình thật |
+| ApplicationSet controller | `replicas: 0`; chart đã pin không có công tắc `enabled` | `replicas: 1` |
 | Prometheus/Grafana/PodMonitor CRD | Giữ để kiểm tra metrics ứng dụng | Giữ |
 | Prometheus | 6 giờ, tối đa 512MB, `emptyDir` giới hạn 2GiB | 7 ngày, tối đa 24GB, PVC 30GiB |
 | Grafana | Không PVC; không datasource Loki/CloudWatch bổ sung | PVC và datasource theo thiết kế |
@@ -16,6 +16,8 @@
 | Production configuration/workloads | Không tạo configuration Application; chart từ chối release production được bật | Luồng promote riêng sau nghiệm thu dev |
 
 Các [values chung](../platform/) có CPU/memory requests và limits cho controller, sidecar, init container và hook Job. [Overlays lab](../profiles/lab/) chỉ giảm footprint, không chứa account/ARN hoặc image release. Application con nạp values chung rồi overlay; bootstrap Ansible/PowerShell cũng nạp đúng overlay cho ESO và Argo CD. Chọn lại architecture không giữ sót giá trị lab trong file nền.
+
+`architecture` tạo configuration Application cho cả dev và prod khi môi trường được kích hoạt. Bộ image production vẫn chờ luồng nghiệm thu/promote dev; không tự lấy image chưa nghiệm thu để bật workload prod. `alerting.enabled` chỉ bật cấu hình gửi alert đến receiver bên ngoài, không tắt Alertmanager của profile đầy đủ. Repository credential vẫn chỉ bật nếu repo chuyển private. Velero giữ chế độ sao lưu Kubernetes vào S3; snapshot EBS/node-agent không thuộc thiết kế đã chốt. Loki giữ chế độ SingleBinary, nên các replica backend/read/write của chế độ distributed vẫn bằng 0.
 
 ## Hợp đồng đầu ra Terraform
 
