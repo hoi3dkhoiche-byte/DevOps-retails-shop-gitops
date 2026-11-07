@@ -1,12 +1,17 @@
 {{- if include "retail.deploymentEnabled" . }}
-{{- if and .Values.release.enabled (or .Values.domain (eq .Values.environment "prod")) }}
+{{- if .Values.release.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: retail-ui
   annotations:
     argocd.argoproj.io/sync-wave: "20"
+    {{- if .Values.domain }}
     alb.ingress.kubernetes.io/group.name: retail-public
+    {{- else }}
+    # Hostless dev/prod '/' rules need separate ALBs to avoid routing collisions.
+    alb.ingress.kubernetes.io/group.name: {{ printf "retail-%s" .Values.environment | quote }}
+    {{- end }}
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/readiness

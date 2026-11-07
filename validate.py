@@ -129,6 +129,64 @@ def validate_environment_order(documents):
             "Ingress must follow service Applications")
 
 
+def validate_ingress(documents, environment, config):
+    """Check both domainless HTTP and shared-domain HTTPS application entrypoints."""
+    ingresses = [document for document in documents if document["kind"] == "Ingress"]
+    require(len(ingresses) == 1, "Each enabled environment requires exactly one ALB Ingress")
+    ingress = ingresses[0]
+    annotations = ingress["metadata"]["annotations"]
+    prefix = "alb.ingress.kubernetes.io/"
+    require(ingress["spec"].get("ingressClassName") == "alb"
+            and annotations.get(prefix + "scheme") == "internet-facing"
+            and annotations.get(prefix + "target-type") == "ip",
+            "Application ingress must use the public ALB controller with Pod IP targets")
+    rules = ingress["spec"]["rules"]
+    require(len(rules) == 1, "Each environment requires one UI routing rule")
+    paths = rules[0]["http"]["paths"]
+    require(len(paths) == 1 and paths[0]["path"] == "/" and paths[0]["pathType"] == "Prefix"
+            and paths[0]["backend"]["service"] == {"name": "ui-active", "port": {"number": 8080}},
+            "ALB must route to the active UI on port 8080")
+    require(annotations.get(prefix + "healthcheck-path") == "/actuator/health/readiness",
+            "ALB requires the UI readiness health check")
+    listeners = json.loads(annotations.get(prefix + "listen-ports", "[]"))
+    if config.get("domain"):
+        require(annotations.get(prefix + "group.name") == "retail-public",
+                "Domain-based environments must share their public ALB")
+        expected_host = ("dev." if environment == "dev" else "") + "retail." + config["domain"]
+        require(rules[0].get("host") == expected_host, "Shared ALB requires distinct environment hostnames")
+        require(listeners == [{"HTTP": 80}, {"HTTPS": 443}]
+                and annotations.get(prefix + "ssl-redirect") == "443"
+                and annotations.get(prefix + "certificate-arn") == config["certificateArn"],
+                "Domain ingress requires its ACM certificate and HTTP-to-HTTPS redirect")
+        if environment == "dev":
+            condition = json.loads(annotations.get(prefix + "conditions.ui-active", "[]"))
+            require(condition == [{"field": "source-ip", "sourceIpConfig": {"values": config["adminCidrs"]}}],
+                    "Shared-domain dev ALB route must restrict client source IPs")
+        else:
+            require(prefix + "conditions.ui-active" not in annotations,
+                    "Production must not inherit the dev-only source IP condition")
+    else:
+        require(annotations.get(prefix + "group.name") == "retail-" + environment,
+                "Hostless dev/prod routes must use separate environment ALB groups")
+        require("host" not in rules[0] and listeners == [{"HTTP": 80}],
+                "Domainless ALB ingress must provide hostless HTTP access")
+        require(annotations.get(prefix + "inbound-cidrs") == ",".join(config["adminCidrs"]),
+                "Domainless ALB must allow only configured administration CIDRs")
+        require(prefix + "certificate-arn" not in annotations and prefix + "ssl-redirect" not in annotations,
+                "Domainless HTTP must not require an absent certificate")
+    validate_environment_order(documents)
+    return ingress
+
+
+def validate_load_balancer_controller(documents):
+    controllers = [document for document in documents if document["kind"] == "Deployment"
+                   and document["metadata"].get("labels", {}).get("app.kubernetes.io/name") == "aws-load-balancer-controller"]
+    require(len(controllers) == 1, "Expected one AWS Load Balancer Controller deployment")
+    containers = controllers[0]["spec"]["template"]["spec"]["containers"]
+    require(any("--enable-backend-security-group=true" in container.get("args", []) for container in containers),
+            "ALB controller must manage backend security group rules")
+
+
 def validate_activation(config, temporary):
     actual = yaml.safe_load(config.read_text(encoding="utf-8"))
     repository_credentials(actual)
@@ -274,6 +332,8 @@ def validate_platform_profiles(cache):
             rendered = render(chart, values_files(GITOPS, name, config),
                               namespace=namespaces.get(name, "monitoring"),
                               release="argocd" if name == "argo-cd" else name, include_crds=True)
+            if name == "aws-load-balancer-controller":
+                validate_load_balancer_controller(rendered)
             if name == "argo-cd":
                 require(not any(document["kind"] == "Secret" and document["metadata"]["name"] in {"argocd-secret", "argocd-redis"}
                                 for document in rendered), "Argo CD chart must preserve the ESO credential Secrets")
@@ -351,13 +411,15 @@ def main():
                 render(GITOPS / "applications", [actual_config, GITOPS / "environments" / environment / "images.yaml"], {"environment": environment})
             docs = render(GITOPS / "applications", [config, release], {"environment": environment})
             validate_service_applications(docs, environment, json.loads(release.read_text(encoding="utf-8")))
+            validate_ingress(docs, environment, offline_target_config())
             policy = next(document for document in docs if document["kind"] == "NetworkPolicy" and document["metadata"]["name"] == "default-deny")
             require(set(policy["spec"]["policyTypes"]) == {"Ingress", "Egress"}, "Both directions must default deny")
-            domain = render(GITOPS / "applications", [config, release], {"environment": environment, "domain": "example.test", "certificateArn": "arn:aws:acm:ap-southeast-1:111122223333:certificate/01234567-89ab-cdef-0123-456789abcdef"})
-            ingress = next(document for document in domain if document["kind"] == "Ingress")
-            validate_environment_order(domain)
-            route = ingress["spec"]["rules"][0]["http"]["paths"][0]["backend"]["service"]
-            require(route == {"name": "ui-active", "port": {"number": 8080}}, "ALB must route to the active UI on port 8080")
+            domain_config = dict(offline_target_config(), domain="example.test",
+                                 certificateArn="arn:aws:acm:ap-southeast-1:111122223333:certificate/01234567-89ab-cdef-0123-456789abcdef")
+            domain = render(GITOPS / "applications", [config, release], {
+                "environment": environment, "domain": domain_config["domain"],
+                "certificateArn": domain_config["certificateArn"]})
+            validate_ingress(domain, environment, domain_config)
             for service in SERVICES:
                 validate_source_chart(service, environment, source, seed["images"].get(service))
         render(GITOPS / "platform-resources", [config])
