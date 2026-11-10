@@ -5,47 +5,47 @@
     "platform": "linux/amd64",
     "run": {
       "attempt": "1",
-      "id": "41033493219",
-      "url": "https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop/actions/runs/41033493219/attempts/1"
+      "id": "42738346576",
+      "url": "https://github.com/hoi3dkhoiche-byte/DevOps-retails-shop/actions/runs/42738346576/attempts/1"
     },
     "schema_version": 1,
-    "source_commit": "d0e13455270aed05c1029422366de96873524edf"
+    "source_commit": "3835a35f8431a34b28b686d55fc5a8bea8b5f2b9"
   },
   "images": {
     "cart": {
-      "digest": "sha256:8d0a9ff6906296368842e63a988a807dd00411bec39801c0e0c5a7bbb0654884",
-      "image_id": "sha256:695352e8fe359cc750406bf00d98aca0ddf68953c54d3a112f007814179d61a6",
-      "reference": "docker.io/hmannnguye/devops-retails-shop-cart@sha256:8d0a9ff6906296368842e63a988a807dd00411bec39801c0e0c5a7bbb0654884",
+      "digest": "sha256:b8145da47c395cc4024bfe5007c0178798b0eed18d1b2b90232d0087bb7512d7",
+      "image_id": "sha256:ee47c2400a42f1babd555d0f97884beccdc4482ddf877b488abab69b98ea77ec",
+      "reference": "docker.io/hmannnguye/devops-retails-shop-cart@sha256:b8145da47c395cc4024bfe5007c0178798b0eed18d1b2b90232d0087bb7512d7",
       "repository": "docker.io/hmannnguye/devops-retails-shop-cart",
-      "tag": "sha-d0e13455270aed05c1029422366de96873524edf-run-41033493219-1"
+      "tag": "sha-3835a35f8431a34b28b686d55fc5a8bea8b5f2b9-run-42738346576-1"
     },
     "catalog": {
-      "digest": "sha256:d38b26636cd42825a1a12a3026638866d59468fb38bf7bb55a16490bfc369ab4",
-      "image_id": "sha256:2706036bb7b4f5c01a2f7931f4d34a900c393233d46da04133a0c80b7d9136b4",
-      "reference": "docker.io/hmannnguye/devops-retails-shop-catalog@sha256:d38b26636cd42825a1a12a3026638866d59468fb38bf7bb55a16490bfc369ab4",
+      "digest": "sha256:733cc1a74d278d5ad2bea118b3971a6c03d428d5592fa69dcbd9eb80571679f4",
+      "image_id": "sha256:44fe57ad127b6883a39ed4902773cba21c7839300336c229b97949360ed635ff",
+      "reference": "docker.io/hmannnguye/devops-retails-shop-catalog@sha256:733cc1a74d278d5ad2bea118b3971a6c03d428d5592fa69dcbd9eb80571679f4",
       "repository": "docker.io/hmannnguye/devops-retails-shop-catalog",
-      "tag": "sha-d0e13455270aed05c1029422366de96873524edf-run-41033493219-1"
+      "tag": "sha-3835a35f8431a34b28b686d55fc5a8bea8b5f2b9-run-42738346576-1"
     },
     "checkout": {
-      "digest": "sha256:2656c7cb870320fce8d77746271a9adadc854045d6cda53d767213a0aea7a471",
-      "image_id": "sha256:fa14aa0b4146ce1371a7f12ce319add4b7877929061b0f3c2de556b4ea41b047",
-      "reference": "docker.io/hmannnguye/devops-retails-shop-checkout@sha256:2656c7cb870320fce8d77746271a9adadc854045d6cda53d767213a0aea7a471",
+      "digest": "sha256:b1b65fb9f8195dc430897e1287c4f7c8de68f2cf5af444bbfb5f46810b7b8ed9",
+      "image_id": "sha256:05b0628b400695b217df9c9c01c83fb28ca44ba9145f1a5144309bd9fab271d2",
+      "reference": "docker.io/hmannnguye/devops-retails-shop-checkout@sha256:b1b65fb9f8195dc430897e1287c4f7c8de68f2cf5af444bbfb5f46810b7b8ed9",
       "repository": "docker.io/hmannnguye/devops-retails-shop-checkout",
-      "tag": "sha-d0e13455270aed05c1029422366de96873524edf-run-41033493219-1"
+      "tag": "sha-3835a35f8431a34b28b686d55fc5a8bea8b5f2b9-run-42738346576-1"
     },
     "orders": {
-      "digest": "sha256:b9e7f267becb5df5ce027bc2a18f5d4fff076eed1e0678dd8043872435a49fca",
-      "image_id": "sha256:1125dfabf4c152e4713e545bd336317430ce3122d6987fb1222d5eb069af2f9d",
-      "reference": "docker.io/hmannnguye/devops-retails-shop-orders@sha256:b9e7f267becb5df5ce027bc2a18f5d4fff076eed1e0678dd8043872435a49fca",
+      "digest": "sha256:1cda054323c8b7bc08351cbc417bde4fe4746eb1a4d2883be9938c3173b39603",
+      "image_id": "sha256:f250269f36c02b5f09846d9a3edc169e5363d3f4b50d3e0817431fb4c97fcffd",
+      "reference": "docker.io/hmannnguye/devops-retails-shop-orders@sha256:1cda054323c8b7bc08351cbc417bde4fe4746eb1a4d2883be9938c3173b39603",
       "repository": "docker.io/hmannnguye/devops-retails-shop-orders",
-      "tag": "sha-d0e13455270aed05c1029422366de96873524edf-run-41033493219-1"
+      "tag": "sha-3835a35f8431a34b28b686d55fc5a8bea8b5f2b9-run-42738346576-1"
     },
     "ui": {
-      "digest": "sha256:4dbf450121a439439b2014740a16a0cb79187c7872a000fb7856002ec67949b5",
-      "image_id": "sha256:46c944569166d9d9ab050a80fa93d05c3a7472fc84d64159a6d7091441349435",
-      "reference": "docker.io/hmannnguye/devops-retails-shop@sha256:4dbf450121a439439b2014740a16a0cb79187c7872a000fb7856002ec67949b5",
+      "digest": "sha256:f1a388c5f0e2dd0d19de610db445a9cc72ee935e646d97395a4142d2c4e7824c",
+      "image_id": "sha256:26e33f3c8bbea366f6b1e7132a9f324166883abedcbfbcea7068d1434d7ef290",
+      "reference": "docker.io/hmannnguye/devops-retails-shop@sha256:f1a388c5f0e2dd0d19de610db445a9cc72ee935e646d97395a4142d2c4e7824c",
       "repository": "docker.io/hmannnguye/devops-retails-shop",
-      "tag": "sha-d0e13455270aed05c1029422366de96873524edf-run-41033493219-1"
+      "tag": "sha-3835a35f8431a34b28b686d55fc5a8bea8b5f2b9-run-42738346576-1"
     }
   }
 }
